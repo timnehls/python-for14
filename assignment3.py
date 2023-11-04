@@ -3,7 +3,7 @@ import datetime
 import os
 import pandas as pd
 
-
+# TODO Check if changing is beneficial
 START_DATE = datetime.date(2019, 3, 1)
 END_DATE = datetime.date(2019, 8, 31)
 
@@ -21,31 +21,7 @@ class Fleet:
             self._cars.append(Car(car_id=car_id))
 
         self._utilisation = self._compute_utilisation()
-        self._trips = self._store_trips()
-
-    def _store_trips(self):
-        """A method that loads the trips of all cars and processes them
-        in order to be used by the Fleet class.
-
-        Returns:
-            dataframe: The subsetted and sorted dataframe
-            only including those trips that are done by cars
-            specified in self._cars and lying in the date interval
-            specified by the global variables.
-        """
-        trips = import_csv(DIR, TRIPS_FILE)
-        trips = select_by_value(trips, "car_id", self._cars)
-
-        date_interval = (START_DATE, END_DATE)
-        time_columns = ("start_ts", "last_logout_ts")
-
-        trips = convert_columns_to_datetime(trips, time_columns)
-        trips = select_by_date_interval(trips, time_columns, date_interval)
-
-        sort_by = ["car_id", "start_ts"]
-        trips = sort_df(trips, sort_by)
-
-        return trips
+        self._trips = store_trips(self._cars)
 
     def _compute_utilisation(self):
         """A method that returns the utilisation of all cars stored in the fleet.
@@ -78,7 +54,6 @@ class Car:
         # rental_time = 0
 
         rental_time = sum(self._trips["last_logout_ts"] - self._trips["start_ts"])
-
 
         # for item in self._trips:
         #     time = sum(item.iloc[:, 1] - item.iloc[:, 0], datetime.timedelta())
@@ -116,6 +91,33 @@ class Car:
 
 
 # ---------------- HELPER FUNCTIONS ---------------- #
+
+
+def store_trips(cars):
+    """
+    TODO
+    A method that loads the trips of all cars and processes them
+    in order to be used by the Fleet class.
+
+    Returns:
+        dataframe: The subsetted and sorted dataframe
+        only including those trips that are done by cars
+        specified in self._cars and lying in the date interval
+        specified by the global variables.
+    """
+    trips = import_csv(DIR, TRIPS_FILE)
+    trips = select_by_value(trips, "car_id", cars)
+
+    date_interval = (START_DATE, END_DATE)
+    time_columns = ("start_ts", "last_logout_ts")
+
+    trips = convert_columns_to_datetime(trips, time_columns)
+    trips = select_by_date_interval(trips, time_columns, date_interval)
+
+    sort_by = ["car_id", "start_ts"]
+    trips = sort_df(trips, sort_by)
+
+    return trips
 
 
 def select_by_value(df, column, values):
