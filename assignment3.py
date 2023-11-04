@@ -75,11 +75,14 @@ class Car:
         Returns:
             Float: The utilisation of the car.
         """
-        rental_time = 0
+        # rental_time = 0
 
-        for item in self._trips:
-            time = sum(item.iloc[:, 1] - item.iloc[:, 0], datetime.timedelta())
-            rental_time += time
+        rental_time = sum(self._trips["last_logout_ts"] - self._trips["start_ts"])
+
+
+        # for item in self._trips:
+        #     time = sum(item.iloc[:, 1] - item.iloc[:, 0], datetime.timedelta())
+        #     rental_time += time
 
         period_length = END_DATE - START_DATE
 
