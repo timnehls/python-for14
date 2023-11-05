@@ -1,8 +1,8 @@
 """A program that reschedules car trips for a rental company and prints the new utilisation."""
 
-import pandas as pd
 import os
 import datetime
+import pandas as pd
 
 
 def main():

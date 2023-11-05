@@ -24,10 +24,10 @@ class Fleet:
         self._trips = store_trips(self._cars)
 
     def _compute_utilisation(self):
-        """A method that returns the utilisation of all cars stored in the fleet.
+        """#A method that returns the utilisation of all cars stored in the fleet.
 
-        Returns:
-            List: Utilisations of all cars stored in the fleet.
+        #Returns:
+            #List: Utilisations of all cars stored in the fleet.
         """
         utilisation = []
 
@@ -37,19 +37,49 @@ class Fleet:
         return utilisation
 
 
+    def rearrange(self):
+        for index, row in self._trips.iterrows():
+            start = row["start_ts"]
+            end = row["last_logout_ts"]
+
+            for car in self._cars:
+                # For all trips, do the following:
+                # There are cars 6 to 10.
+                # 1. Check if the trip can be assigned to car 6 (the trip starts after the end of the current trip)
+                # 2. If yes, assign it to the car
+                # 3. If no, assign the trip to the next car
+                # 4. Repeat until all trips are assigned
+                if car.get_number_trips() == 0 or start >= car.get_end_last_trip:
+                    car.add_trip(start, end)
+                    break
+
+
+
 class Car:
     """A class that saves the characteristics of a car of the rental company."""
 
     def __init__(self, car_id):
         self._id = car_id
-        self._trips = pd.DataFrame()
+        self._trips = pd.DataFrame(columns=["start", "end"])
+        self._end_last_trip = self._trips.tail(1)["end"]
+        self._number_trips = len(self._trips)
         self._utilisation = self._compute_utilisation()
+
+    def add_trip(self, start, end):
+        new_trip = {"start": start, "end": end}
+        self._trips.append(new_trip)
+
+    def get_end_last_trip(self):
+        return self._end_last_trip
+
+    def get_number_trips(self):
+        return self._number_trips
 
     def _compute_utilisation(self):
         """A method that computes the utilisation of the car.
 
         Returns:
-            Float: The utilisation of the car.
+            #Float: The utilisation of the car.
         """
         # rental_time = 0
 
@@ -92,17 +122,15 @@ class Car:
 
 # ---------------- HELPER FUNCTIONS ---------------- #
 
-
 def store_trips(cars):
     """
-    TODO
     A method that loads the trips of all cars and processes them
     in order to be used by the Fleet class.
 
     Returns:
         dataframe: The subsetted and sorted dataframe
         only including those trips that are done by cars
-        specified in self._cars and lying in the date interval
+        specified in cars and lying in the date interval
         specified by the global variables.
     """
     trips = import_csv(DIR, TRIPS_FILE)
@@ -114,7 +142,7 @@ def store_trips(cars):
     trips = convert_columns_to_datetime(trips, time_columns)
     trips = select_by_date_interval(trips, time_columns, date_interval)
 
-    sort_by = ["car_id", "start_ts"]
+    sort_by = "start_ts"
     trips = sort_df(trips, sort_by)
 
     return trips
@@ -186,7 +214,8 @@ def select_by_date_interval(df, columns, interval):
     Returns:
         dataframe: a new dataframe with only subsetted rows.
     """
-    return df[(df[columns[0]] >= interval[0]) & (df[columns[1]] <= interval[1])]
+    return df[(df[columns[0]].dt.date >= interval[0]) & (df[columns[1]].dt.date <= interval[1])]
+
 
 
 def import_csv(directory, filename):
