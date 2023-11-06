@@ -11,23 +11,23 @@ END_DATE = datetime.date(2019, 8, 31)
 DIR = "D:/OneDrive/uni/nhhcourses/for14/assignments/assignment3"
 TRIPS_FILE = "trip_data.csv"
 
+# SUBOPTIMAL?
+CARS = [6,7,8,9,10]
+
 
 class Fleet:
     """A class that holds the cars of the rental company."""
 
-    def __init__(self, car_ids):
-        self._cars = []
-        for car_id in car_ids:
-            self._cars.append(Car(car_id=car_id))
-
-        self._utilisation = self._compute_utilisation()
-        self._trips = store_trips(self._cars)
+    def __init__(self):
+        self._cars = self.create_car_objects(CARS)
+        self._trips = store_trips(CARS)
+        #self._utilisation = self._compute_utilisation()
 
     def _compute_utilisation(self):
-        """#A method that returns the utilisation of all cars stored in the fleet.
+        """A method that returns the utilisation of all cars stored in the fleet.
 
-        #Returns:
-            #List: Utilisations of all cars stored in the fleet.
+        Returns:
+            List: Utilisations of all cars stored in the fleet.
         """
         utilisation = []
 
@@ -37,22 +37,24 @@ class Fleet:
         return utilisation
 
 
+    # TODO Add description
     def rearrange(self):
         for index, row in self._trips.iterrows():
             start = row["start_ts"]
             end = row["last_logout_ts"]
 
             for car in self._cars:
-                # For all trips, do the following:
-                # There are cars 6 to 10.
-                # 1. Check if the trip can be assigned to car 6 (the trip starts after the end of the current trip)
-                # 2. If yes, assign it to the car
-                # 3. If no, assign the trip to the next car
-                # 4. Repeat until all trips are assigned
-                if car.get_number_trips() == 0 or start >= car.get_end_last_trip:
+                if car.get_number_trips() == 0 or start >= car.get_end_last_trip():
                     car.add_trip(start, end)
                     break
 
+
+    # TODO Add description
+    def create_car_objects(self, car_ids):
+        car_array = []
+        for car_id in car_ids:
+            car_array.append(Car(car_id=car_id))
+        return car_array
 
 
 class Car:
@@ -61,17 +63,23 @@ class Car:
     def __init__(self, car_id):
         self._id = car_id
         self._trips = pd.DataFrame(columns=["start", "end"])
-        self._end_last_trip = self._trips.tail(1)["end"]
-        self._number_trips = len(self._trips)
-        self._utilisation = self._compute_utilisation()
+        self._end_last_trip = datetime.date(1970, 1, 1)
+        self._number_trips = 0
+        # self._utilisation = self._compute_utilisation()
 
+    # TODO Add description
     def add_trip(self, start, end):
         new_trip = {"start": start, "end": end}
-        self._trips.append(new_trip)
+        df_new_trip = pd.DataFrame([new_trip])
+        self._trips = pd.concat([self._trips, df_new_trip])
+        self._end_last_trip = end
+        self._number_trips += 1
 
+    # TODO Add description
     def get_end_last_trip(self):
         return self._end_last_trip
 
+    # TODO Add description
     def get_number_trips(self):
         return self._number_trips
 
@@ -111,20 +119,20 @@ class Car:
         """
         return self._trips
 
-    def get_utilisation(self):
+#    def get_utilisation(self):
         """Getter method for the utilisation variable.
 
         Returns:
             Float: The utilisation variable of the car object.
         """
-        return self._utilisation
+#        return self._utilisation
 
 
 # ---------------- HELPER FUNCTIONS ---------------- #
 
+# TODO Change description
 def store_trips(cars):
-    """
-    A method that loads the trips of all cars and processes them
+    """ A method that loads the trips of all cars and processes them
     in order to be used by the Fleet class.
 
     Returns:
