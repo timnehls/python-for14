@@ -16,6 +16,8 @@ CARS = [6,7,8,9,10]
 
 
 def main():
+    """Main method.
+    """
     fleet = Fleet()
 
     print(f"Utilisation before rearranging: {fleet.get_utilisation()}")
@@ -222,7 +224,6 @@ class Car:
 
 # ---------------- HELPER FUNCTIONS ---------------- #
 
-# TODO Change description
 def store_trips():
     """ A method that loads the trips of all cars and processes them
     in order to be used by the Fleet class.
