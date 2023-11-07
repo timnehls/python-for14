@@ -11,14 +11,14 @@ END_DATE = datetime.date(2019, 8, 31)
 DIR = "D:/OneDrive/uni/nhhcourses/for14/assignments/assignment3"
 TRIPS_FILE = "trip_data.csv"
 
-# SUBOPTIMAL?
-CARS = [6,7,8,9,10]
 
 
 def main():
     """Main method.
     """
-    fleet = Fleet()
+    car_ids = [6, 7, 8, 9, 10]
+
+    fleet = Fleet(car_ids)
 
     print(f"Utilisation before rearranging: {fleet.get_utilisation()}")
     fleet.rearrange()
@@ -29,10 +29,10 @@ def main():
 class Fleet:
     """A class that holds the cars of the rental company."""
 
-    def __init__(self):
+    def __init__(self, car_ids):
         # First trips, then cars (need trips for utilisation)
-        self._trips = store_trips()
-        self._cars = self._create_car_objects(CARS)
+        self._trips = store_trips(car_ids)
+        self._cars = self._create_car_objects(car_ids)
 
         print(self._cars)
 
@@ -224,7 +224,7 @@ class Car:
 
 # ---------------- HELPER FUNCTIONS ---------------- #
 
-def store_trips():
+def store_trips(car_ids):
     """ A method that loads the trips of all cars and processes them
     in order to be used by the Fleet class.
 
@@ -234,7 +234,7 @@ def store_trips():
         specified by the global variables.
     """
     trips = import_csv(DIR, TRIPS_FILE)
-    trips = select_by_value(trips, "car_id", CARS)
+    trips = select_by_value(trips, "car_id", car_ids)
 
     date_interval = (START_DATE, END_DATE)
     time_columns = ("start_ts", "last_logout_ts")
