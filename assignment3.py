@@ -36,9 +36,9 @@ class Fleet:
 
         return utilisation
 
-
-    # TODO Add description
     def rearrange(self):
+        """A method that rearranges the trips saved in the trips variable.
+        """
         for index, row in self._trips.iterrows():
             start = row["start_ts"]
             end = row["last_logout_ts"]
@@ -48,9 +48,15 @@ class Fleet:
                     car.add_trip(start, end)
                     break
 
-
-    # TODO Add description
     def create_car_objects(self, car_ids):
+        """A method that creates a list of cars based on their IDs.
+
+        Args:
+            car_ids (List): The IDs of cars that should be instantiated.
+
+        Returns:
+            List: A list of cars with corresponding IDs.
+        """
         car_array = []
         for car_id in car_ids:
             car_array.append(Car(car_id=car_id))
@@ -63,24 +69,37 @@ class Car:
     def __init__(self, car_id):
         self._id = car_id
         self._trips = pd.DataFrame(columns=["start", "end"])
-        self._end_last_trip = datetime.date(1970, 1, 1)
+        self._end_last_trip = datetime.date(1970, 1, 1) # First trip always after 1970
         self._number_trips = 0
         # self._utilisation = self._compute_utilisation()
 
-    # TODO Add description
     def add_trip(self, start, end):
+        """A method that adds a trip to the car's trips dataframe.
+
+        Args:
+            start (Datetime): The start of the trip.
+            end (Datetime): The end of the trip.
+        """
         new_trip = {"start": start, "end": end}
         df_new_trip = pd.DataFrame([new_trip])
         self._trips = pd.concat([self._trips, df_new_trip])
         self._end_last_trip = end
         self._number_trips += 1
 
-    # TODO Add description
     def get_end_last_trip(self):
+        """A method that returns the end of the last trip.
+
+        Returns:
+            Datetime: End of the last trip of the car.
+        """
         return self._end_last_trip
 
-    # TODO Add description
     def get_number_trips(self):
+        """A method that returns the number of trips of the car.
+
+        Returns:
+            Integer: Number of trips that the car currently has.
+        """
         return self._number_trips
 
     def _compute_utilisation(self):
