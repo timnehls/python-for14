@@ -17,8 +17,9 @@ def main():
     """Main method.
     """
     car_ids = [6, 7, 8, 9, 10]
+    trips = store_trips(car_ids)
 
-    fleet = Fleet(car_ids)
+    fleet = Fleet(car_ids, trips)
 
     print(f"Utilisation before rearranging: {fleet.get_utilisation()}")
     fleet.rearrange()
@@ -29,9 +30,9 @@ def main():
 class Fleet:
     """A class that holds the cars of the rental company."""
 
-    def __init__(self, car_ids):
+    def __init__(self, car_ids, trips):
         # First trips, then cars (need trips for utilisation)
-        self._trips = store_trips(car_ids)
+        self._trips = trips
         self._cars = self._create_car_objects(car_ids)
 
         print(self._cars)
@@ -119,8 +120,6 @@ class Car:
     def __init__(self, car_id, original_trips):
         self._id = car_id
         self._trips = original_trips
-
-        # self._trips = pd.DataFrame(columns=["start", "end"])
 
         self._end_last_trip = datetime.date(1970, 1, 1) # First trip always after 1970
         self._number_trips = 0
