@@ -135,6 +135,7 @@ class Fleet:
                     car.add_trip(start, end)
                     break
 
+        # Update the car and fleet utilisation.
         for car in self._cars:
             car.update_utilisation()
 
