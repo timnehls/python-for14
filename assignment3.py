@@ -1,9 +1,15 @@
 """Assignment 3."""
+import warnings
 import datetime
 import os
 import pandas as pd
 
-# TODO Check if changing is beneficial
+# Ignore FutureWarning when concatting empty dataframe
+# and new trip in Fleet.rearrange()
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+# Define start and end date
+# Global variables as needed by multiple classes
 START_DATE = datetime.date(2019, 3, 1)
 END_DATE = datetime.date(2019, 8, 31)
 
@@ -16,28 +22,32 @@ TRIPS_FILE = "trip_data.csv"
 def main():
     """Main method.
     """
+    # Define car IDs
     car_ids = [6, 7, 8, 9, 10]
-    trips = store_trips(car_ids)
 
-    fleet = Fleet(car_ids, trips)
+    # Define minimum duration per booking in minutes
+    minimum_duration_minutes = 30
+
+    # Instantiate fleet with corresponding car IDs
+    fleet = Fleet(car_ids)
 
     print(f"Utilisation before rearranging: {fleet.get_utilisation()}")
-    fleet.rearrange()
-    print(f"Utilisation after rearranging: {fleet.get_utilisation()}")
 
+    # Rearrange trips (keep only those longer than 30 minutes)
+    fleet.rearrange(minimum_duration_minutes)
+
+    print(f"Utilisation after rearranging: {fleet.get_utilisation()}")
 
 
 class Fleet:
     """A class that holds the cars of the rental company."""
 
-    def __init__(self, car_ids, trips):
-        # First trips, then cars (need trips for utilisation)
-        self._trips = trips
+    def __init__(self, car_ids):
+        self._trips = store_trips(car_ids)
         self._cars = self._create_car_objects(car_ids)
-
-        print(self._cars)
-
         self._utilisation = self._compute_utilisation()
+
+    # ---------------- PRIVATE METHODS ---------------- #
 
     def _compute_utilisation(self):
         """A method that returns the utilisation of all cars stored in the fleet.
@@ -48,29 +58,9 @@ class Fleet:
         utilisation = []
 
         for car in self._cars:
-            utilisation.append(car.get_utilisation())
+            utilisation.append(round(car.get_utilisation(), 3))
 
         return utilisation
-
-    def rearrange(self):
-        """A method that rearranges the trips saved in the trips variable.
-        """
-        for car in self._cars:
-            car.reset_trips()
-
-        for index, row in self._trips.iterrows():
-            start = row["start_ts"]
-            end = row["last_logout_ts"]
-
-            for car in self._cars:
-                num_trips = car.get_number_trips()
-                end_last_trip = car.get_end_last_trip()
-
-                # The first addition of a trip to a car will give a FutureWarning,
-                # as the cars' trip dataframes are empty in the beginning.
-                if num_trips == 0 or start >= end_last_trip():
-                    car.add_trip(start, end)
-                    break
 
     def _create_car_objects(self, car_ids):
         """A method that creates a list of cars based on their IDs
@@ -104,6 +94,7 @@ class Fleet:
         """
         return self._trips[self._trips["car_id"] == car_id]
 
+    # ---------------- PUBLIC METHODS ---------------- #
 
     def get_utilisation(self):
         """A method that gives the utilisation of the fleet.
@@ -111,22 +102,63 @@ class Fleet:
         Returns:
             List: A list of all utilisations of the cars in the fleet.
         """
-        return self._compute_utilisation()
+        return self._utilisation
+
+    def rearrange(self, minimum_duration = 30):
+        """A method that rearranges the trips saved in the trips variable
+        using a greedy algorithm.
+        The 'heart' of the code.
+
+        Args:
+            minimum_duration (int, optional): The minimum duration of a trip. Defaults to 30.
+        """
+        for car in self._cars:
+            car.reset_trips()
+
+        for index, row in self._trips.iterrows():
+            start = row["start_ts"]
+            end = row["last_logout_ts"]
+
+            length = end - start
+
+            # Check whether booking is long enough
+            if length < datetime.timedelta(minutes = minimum_duration):
+                continue
+
+            for car in self._cars:
+                num_trips = car.get_number_trips()
+
+                # The first addition of a trip to a car will give a FutureWarning,
+                # as the cars' trip dataframes are empty in the beginning.
+                # This is suppressed by the warnings filter above.
+                if num_trips == 0 or (start >= car.get_end_last_trip()).bool():
+                    car.add_trip(start, end)
+                    break
+
+        for car in self._cars:
+            car.update_utilisation()
+
+        self._utilisation = self._compute_utilisation()
+
 
 
 class Car:
-    """A class that saves the characteristics of a car of the rental company."""
+    """A class that saves the characteristics of a car of the rental company.
+    """
 
     def __init__(self, car_id, original_trips):
         self._id = car_id
         self._trips = original_trips
 
-        self._end_last_trip = datetime.date(1970, 1, 1) # First trip always after 1970
-        self._number_trips = 0
+        self._utilisation = self._compute_utilisation()
 
-        self._utilisation = self._compute_utilisation(self._trips)
+        # In case of rearranging, we want to keep the previous
+        # utilisation rate.
+        self._old_utilisation = self._utilisation
 
-    def _compute_utilisation(self, trips):
+    # ---------------- PRIVATE METHODS ---------------- #
+
+    def _compute_utilisation(self):
         """A method that computes the utilisation based on a trips dataframe.
 
         Args:
@@ -135,35 +167,18 @@ class Car:
         Returns:
             Float: The utilisation of the car based on the trips dataframe.
         """
-        rental_time = sum(trips.iloc[:, 1] - trips.iloc[:, 0], datetime.timedelta())
+        rental_time = sum(self._trips.iloc[:, 1] - self._trips.iloc[:, 0], datetime.timedelta())
         period_length = END_DATE - START_DATE
         return rental_time / period_length
 
-    def _old_and_new_utilisation(self):
-        old_utilisation = self._utilisation
-        self._utilisation = self._compute_utilisation(self._trips)
-        new_utilisation = self._utilisation
-
-        return old_utilisation, new_utilisation
-
-
     # ---------------- PUBLIC METHODS ---------------- #
 
-    def get_id(self):
-        """Getter method for the id variable.
-
-        Returns:
-            Integer: The id variable of the car object.
+    def update_utilisation(self):
+        """A method that recomputes the utilisation of the car.
+        Keeps the previous utilisation as "old_utilisation".
         """
-        return self._id
-
-    def get_trips(self):
-        """Getter method for the trips variable.
-
-        Returns:
-            Dataframe: The trips variable of the car object.
-        """
-        return self._trips
+        self._old_utilisation = self._utilisation
+        self._utilisation = self._compute_utilisation()
 
     def reset_trips(self):
         """A method that resets the trips dataframe.
@@ -176,7 +191,7 @@ class Car:
         Returns:
             Float: Utilisation of the car.
         """
-        return self._compute_utilisation(self._trips)
+        return self._utilisation
 
     def get_end_last_trip(self):
         """A method that returns the end of the last trip.
@@ -184,7 +199,7 @@ class Car:
         Returns:
             Datetime: End of the last trip of the car.
         """
-        return self._end_last_trip
+        return pd.to_datetime(self._trips.tail(1).iloc[:, 1])
 
     def get_number_trips(self):
         """A method that returns the number of trips of the car.
@@ -192,7 +207,7 @@ class Car:
         Returns:
             Integer: Number of trips that the car currently has.
         """
-        return self._number_trips
+        return len(self._trips)
 
     def add_trip(self, start, end):
         """A method that adds a trip to the car's trips dataframe.
@@ -204,21 +219,17 @@ class Car:
         new_trip = {"start": start, "end": end}
         df_new_trip = pd.DataFrame([new_trip])
         self._trips = pd.concat([self._trips, df_new_trip])
-        self._end_last_trip = end
-        self._number_trips += 1
 
     def compare_utilisation(self):
         """A method that prints by how much the original and new utilisation differ.
         """
-        old_utilisation, new_utilisation = self._old_and_new_utilisation()
-
-        relative_change = (new_utilisation - old_utilisation) / old_utilisation - 1
+        relative_change = (self._utilisation - self._old_utilisation) / self._old_utilisation
         if relative_change < 0:
-            print(f"The utilisation decreased by {relative_change*100}%.")
+            print(f"The utilisation decreased by {-relative_change*100:.2f}%.")
         elif relative_change == 0:
             print("The utilisation did not change.")
         else:
-            print(f"The utilisation increased by {relative_change*100}%.")
+            print(f"The utilisation increased by {relative_change*100:.2f}%.")
 
 
 # ---------------- HELPER FUNCTIONS ---------------- #
@@ -234,6 +245,7 @@ def store_trips(car_ids):
     """
     trips = import_csv(DIR, TRIPS_FILE)
     trips = select_by_value(trips, "car_id", car_ids)
+
 
     date_interval = (START_DATE, END_DATE)
     time_columns = ("start_ts", "last_logout_ts")
@@ -260,7 +272,6 @@ def select_by_value(df, column, values):
         dataframe: A dataframe of all rows corresponding to the values.
     """
     selection = df.loc[df[column].isin(values)]
-
     return selection
 
 
